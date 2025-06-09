@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Administrativo con Vue</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input { margin: 5px 0; padding: 10px; width: 100%; max-width: 300px; }
+    button { padding: 10px 15px; background: #42b983; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+    .error { color: red; margin-top: 10px; }
+    .menu-admin {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .opcion {
+      text-align: center;
+      width: 120px;
+      cursor: pointer;
+    }
+    .opcion img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 5px;
+    }
+    form input[type="date"] {
+      max-width: 160px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- LOGIN -->
+  <div v-if="pantalla === 'login'">
+    <h2>Iniciar Sesión</h2>
+    <input type="text" v-model="usuario" placeholder="Usuario" />
+    <input type="password" v-model="contrasena" placeholder="Contraseña" />
+    <button @click="iniciarSesion">Entrar</button>
+    <p class="error" v-if="error">{{ error }}</p>
+  </div>
+
+  <!-- PANEL ADMINISTRATIVO -->
+  <div v-if="pantalla === 'panel'">
+    <h2>Panel Administrativo</h2>
+    <p>Bienvenido, {{ usuario }}.</p>
+    <button @click="cerrarSesion">Cerrar sesión</button>
+
+    <div class="menu-admin">
+      <div class="opcion" @click="pantalla = 'parcelas'">
+        <img src="https://cdn-icons-png.flaticon.com/512/2906/2906206.png" alt="Parcelas" />
+        <div>Parcelas</div>
+      </div>
+      <div class="opcion" @click="pantalla = 'actividad'">
+        <img src="https://cdn-icons-png.flaticon.com/512/3063/3063826.png" alt="Actividad" />
+        <div>Actividad</div>
+      </div>
+      <div class="opcion" @click="pantalla = 'insumos'">
+        <img src="https://cdn-icons-png.flaticon.com/512/1256/1256650.png" alt="Insumos" />
+        <div>Insumos</div>
+      </div>
+      <div class="opcion" @click="pantalla = 'finanzas'">
+        <img src="https://cdn-icons-png.flaticon.com/512/2920/2920145.png" alt="Finanzas" />
+        <div>Finanzas</div>
+      </div>
+      <div class="opcion" @click="pantalla = 'calendario'">
+        <img src="https://cdn-icons-png.flaticon.com/512/747/747310.png" alt="Calendario" />
+        <div>Calendario</div>
+      </div>
+      <div class="opcion" @click="pantalla = 'reportes'">
+        <img src="https://cdn-icons-png.flaticon.com/512/2991/2991108.png" alt="Reportes" />
+        <div>Reportes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MÓDULO DE PARCELAS -->
+  <div v-if="pantalla === 'parcelas'">
+    <h2>Parcelas</h2>
+    <!-- Formulario -->
+    <form @submit.prevent="guardarParcela">
+      <h3>{{ editando ? 'Editar Parcela' : 'Nueva Parcela' }}</h3>
+      <input v-model="form.nombre" placeholder="Nombre de la parcela" required />
+      <input v-model="form.ubicacion" placeholder="Ubicación" required />
+      <input v-model.number="form.superficie" placeholder="Superficie total (ha)" type="number" step="0.01" required />
+      <input v-model="form.propietario" placeholder="Propietario" required />
+      <input v-model="form.tipoSuelo" placeholder="Tipo de suelo" required />
+      <input v-model="form.usoSuelo" placeholder="Uso de suelo" required />
+      <input v-model="form.agua" placeholder="Disponibilidad de agua" required />
+      <input v-model="form.riego" placeholder="Sistema de riego" required />
+      <input v-model="form.siembra" type="date" placeholder="Fecha de siembra" required />
+      <input v-model="form.cosecha" type="date" placeholder="Cosecha estimada" required />
+      <input v-model="form.semilla" placeholder="Tipo de semilla" required />
+      <input v-model="form.fertilizante" placeholder="Cantidad de fertilizante o insumos" required />
+      <input v-model="form.rendimiento" placeholder="Rendimiento por terreno" required />
+      <button type="submit">{{ editando ? 'Actualizar' : 'Guardar' }}</button>
+      <button type="button" @click="cancelarEdicion" v-if="editando" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
+    </form>
+    <!-- Lista de parcelas -->
+    <h3>Parcelas Registradas</h3>
+    <ul v-if="parcelas.length">
+      <li v-for="(p, index) in parcelas" :key="index" style="margin-bottom: 10px;">
+        <strong>{{ p.nombre }}</strong> - {{ p.ubicacion }} ({{ p.superficie }} ha)
+        <br>Propietario: {{ p.propietario }} | Tipo de suelo: {{ p.tipoSuelo }}
+        <br>Uso: {{ p.usoSuelo }} | Agua: {{ p.agua }} | Riego: {{ p.riego }}
+        <br>Siembra: {{ p.siembra }} | Cosecha: {{ p.cosecha }}
+        <br>Semilla: {{ p.semilla }} | Fertilizante: {{ p.fertilizante }} | Rendimiento: {{ p.rendimiento }}
+        <br>
+        <button @click="editarParcela(index)">Editar</button>
+        <button @click="eliminarParcela(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
+      </li>
+    </ul>
+    <p v-else>No hay parcelas registradas aún.</p>
+    <br />
+    <button @click="pantalla = 'panel'">← Volver al Panel</button>
+  </div>
+
+  <!-- MÓDULO DE ACTIVIDADES -->
+<div v-if="pantalla === 'actividad'">
+  <h2>Actividad</h2>
+  
+  <!-- Formulario -->
+  <form @submit.prevent="guardarActividad">
+    <h3>{{ editandoActividad ? 'Editar Actividad' : 'Nueva Actividad' }}</h3>
+    <input v-model="formActividad.fecha" type="date" placeholder="fecha" required />
+    <input v-model="formActividad.descripcion" placeholder="descripcion de la actividad" required />
+    <input v-model="formActividad.duracion" placeholder="duracion de la actividad" required />
+    <input v-model="formActividad.observaciones" placeholder="observaciones" required />
+    <input v-model="formActividad.problemas" placeholder="problemas detectados" required />
+    <input v-model="formActividad.responsable" placeholder="responsable" required />
+    <input v-model="formActividad.parcela" placeholder="parcela asociada" required />
+    <button type="submit">{{ editandoActividad ? 'Actualizar' : 'Guardar' }}</button>
+    <button type="button" @click="cancelarEdicionActividad" v-if="editandoActividad" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
+  </form>
+  
+  <!-- Lista de actividades -->
+  <h3>Actividades Registradas</h3>
+  <ul v-if="actividades.length">
+  <li v-for="(a, index) in actividades" :key="index" style="margin-bottom: 10px;">
+    <strong>{{ a.fecha }}</strong>: {{ a.descripcion }}  
+    <br>Duración: {{ a.duracion }} | Responsable: {{ a.responsable }} | Parcela: {{ a.parcela }}
+    <br>Observaciones: {{ a.observaciones }}
+    <br>Problemas detectados: {{ a.problemas }}
+    <br>
+    <button @click="editarActividad(index)">Editar</button>
+    <button @click="eliminarActividad(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
+  </li>
+</ul>
+
+  <p v-else>No hay actividades registradas aún.</p>
+
+  <br />
+  <button @click="pantalla = 'panel'">← Volver al Panel</button>
+</div>
+
+
+  <!-- PANTALLAS SECUNDARIAS SIMPLES -->
+  <div v-if="pantalla === 'insumos'">
+    <h2>Insumos</h2>
+    <p>Inventario y uso de insumos agrícolas.</p>
+    <button @click="pantalla = 'panel'">← Volver</button>
+  </div>
+  <div v-if="pantalla === 'finanzas'">
+    <h2>Finanzas</h2>
+    <p>Control de ingresos y egresos de la operación agrícola.</p>
+    <button @click="pantalla = 'panel'">← Volver</button>
+  </div>
+  <div v-if="pantalla === 'calendario'">
+    <h2>Calendario</h2>
+    <p>Aquí puedes visualizar y planificar tus actividades.</p>
+    <button @click="pantalla = 'panel'">← Volver</button>
+  </div>
+  <div v-if="pantalla === 'reportes'">
+    <h2>Reportes</h2>
+    <p>Generación de reportes detallados en PDF o Excel.</p>
+    <button @click="pantalla = 'panel'">← Volver</button>
+  </div>
+</div>
+
+<script>
+  const { createApp } = Vue;
+  createApp({
+    data() {
+      return {
+        pantalla: 'login',
+        usuario: '',
+        contrasena: '',
+        error: '',
+        parcelas: JSON.parse(localStorage.getItem('parcelas') || '[]'),
+        form: {
+          nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: ''
+        },
+        editando: false,
+        editIndex: null,
+
+        actividades: JSON.parse(localStorage.getItem('actividades') || '[]'),
+        formActividad: { fecha: '', descripcion: '', duracion: '', observaciones: '', problemas:'', responsable:'', parcela:'' },
+        editandoActividad: false,
+        editIndexActividad: null
+      };
+    },
+    methods: {
+      iniciarSesion() {
+        if (this.usuario === 'admin' && this.contrasena === '1234') {
+          this.error = '';
+          this.pantalla = 'panel';
+        } else {
+          this.error = 'Usuario o contraseña incorrectos.';
+        }
+      },
+      cerrarSesion() {
+        this.usuario = '';
+        this.contrasena = '';
+        this.pantalla = 'login';
+      },
+      guardarParcela() {
+        if (this.editando) {
+          this.parcelas.splice(this.editIndex, 1, { ...this.form });
+        } else {
+          this.parcelas.push({ ...this.form });
+        }
+        this.actualizarStorage();
+        this.reiniciarFormulario();
+      },
+      editarParcela(index) {
+        this.form = { ...this.parcelas[index] };
+        this.editando = true;
+        this.editIndex = index;
+      },
+      eliminarParcela(index) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta parcela?')) {
+          this.parcelas.splice(index, 1);
+          this.actualizarStorage();
+        }
+      },
+      actualizarStorage() {
+        localStorage.setItem('parcelas', JSON.stringify(this.parcelas));
+      },
+      reiniciarFormulario() {
+        this.form = { nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: '' };
+        this.editando = false;
+        this.editIndex = null;
+      },
+      cancelarEdicion() {
+        this.reiniciarFormulario();
+      },
+      guardarActividad() {
+        if (this.editandoActividad) {
+          this.actividades.splice(this.editIndexActividad, 1, { ...this.formActividad });
+        } else {
+          this.actividades.push({ ...this.formActividad });
+        }
+        this.actualizarStorageActividades();
+        this.reiniciarFormularioActividad();
+      },
+      editarActividad(index) {
+        this.formActividad = { ...this.actividades[index] };
+        this.editandoActividad = true;
+        this.editIndexActividad = index;
+      },
+      eliminarActividad(index) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+          this.actividades.splice(index, 1);
+          this.actualizarStorageActividades();
+        }
+      },
+      actualizarStorageActividades() {
+        localStorage.setItem('actividades', JSON.stringify(this.actividades));
+      },
+     reiniciarFormularioActividad() {
+  this.formActividad = {
+    fecha: '',
+    descripcion: '',
+    duracion: '',
+    observaciones: '',
+    problemas: '',
+    responsable: '',
+    parcela: ''
+  };
+  this.editandoActividad = false;
+  this.editIndexActividad = null;
+},
+      cancelarEdicionActividad() {
+        this.reiniciarFormularioActividad();
+      }
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
