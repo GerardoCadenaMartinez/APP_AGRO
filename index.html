@@ -157,13 +157,47 @@
   <button @click="pantalla = 'panel'">← Volver al Panel</button>
 </div>
 
+<!-- PANTALLA DE INSUMOS -->
+<div v-if="pantalla === 'insumos'">
+  <h2>Insumos</h2>
 
-  <!-- PANTALLAS SECUNDARIAS SIMPLES -->
-  <div v-if="pantalla === 'insumos'">
-    <h2>Insumos</h2>
-    <p>Inventario y uso de insumos agrícolas.</p>
-    <button @click="pantalla = 'panel'">← Volver</button>
-  </div>
+  <!-- Formulario de insumos -->
+  <form @submit.prevent="guardarInsumo">
+    <h3>{{ editandoInsumo ? 'Editar Insumo' : 'Nuevo Insumo' }}</h3>
+
+    <input v-model="formInsumo.nombre" placeholder="Nombre del insumo" required />
+    <input v-model="formInsumo.tipo" placeholder="Tipo de insumo" required />
+    <input v-model="formInsumo.cantidad" type="number" placeholder="Cantidad usada" required />
+    <input v-model="formInsumo.unidad" placeholder="Unidad de medida (ej. kg, l, etc.)" required />
+    <input v-model="formInsumo.fechaCompra" type="date" placeholder="Fecha de compra" required />
+    <input v-model="formInsumo.aplicacion" placeholder="Aplicación" required />
+    <input v-model="formInsumo.proveedor" placeholder="Proveedor" required />
+    <input v-model="formInsumo.costo" type="number" placeholder="Costo total" required />
+    <input v-model="formInsumo.parcela" placeholder="Parcela asociada" required />
+    <input v-model="formInsumo.observaciones" placeholder="Observaciones" />
+
+    <button type="submit">{{ editandoInsumo ? 'Actualizar' : 'Guardar' }}</button>
+    <button type="button" @click="cancelarEdicionInsumo" v-if="editandoInsumo" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
+  </form>
+
+  <!-- Lista de insumos -->
+  <h3>Insumos Registrados</h3>
+  <ul v-if="insumos.length">
+    <li v-for="(i, index) in insumos" :key="index" style="margin-bottom: 10px;">
+      <strong>{{ i.nombre }}</strong> - {{ i.tipo }} - {{ i.cantidad }} {{ i.unidad }}
+      <br>Aplicación: {{ i.aplicacion }} | Fecha de compra: {{ i.fechaCompra }}
+      <br>Proveedor: {{ i.proveedor }} | Costo: ${{ i.costo }}
+      <br>Parcela: {{ i.parcela }} | Observaciones: {{ i.observaciones }}
+      <br>
+      <button @click="editarInsumo(index)">Editar</button>
+      <button @click="eliminarInsumo(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
+    </li>
+  </ul>
+  <p v-else>No hay insumos registrados aún.</p>
+
+  <br />
+  <button @click="pantalla = 'panel'">← Volver al Panel</button>
+</div>
   <div v-if="pantalla === 'finanzas'">
     <h2>Finanzas</h2>
     <p>Control de ingresos y egresos de la operación agrícola.</p>
@@ -185,109 +219,160 @@
   const { createApp } = Vue;
   createApp({
     data() {
-      return {
-        pantalla: 'login',
-        usuario: '',
-        contrasena: '',
-        error: '',
-        parcelas: JSON.parse(localStorage.getItem('parcelas') || '[]'),
-        form: {
-          nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: ''
-        },
-        editando: false,
-        editIndex: null,
+  return {
+    pantalla: 'login',
+    usuario: '',
+    contrasena: '',
+    error: '',
 
-        actividades: JSON.parse(localStorage.getItem('actividades') || '[]'),
-        formActividad: { fecha: '', descripcion: '', duracion: '', observaciones: '', problemas:'', responsable:'', parcela:'' },
-        editandoActividad: false,
-        editIndexActividad: null
-      };
+    parcelas: JSON.parse(localStorage.getItem('parcelas') || '[]'),
+    form: {
+      nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: ''
     },
-    methods: {
-      iniciarSesion() {
-        if (this.usuario === 'admin' && this.contrasena === '1234') {
-          this.error = '';
-          this.pantalla = 'panel';
-        } else {
-          this.error = 'Usuario o contraseña incorrectos.';
-        }
-      },
-      cerrarSesion() {
-        this.usuario = '';
-        this.contrasena = '';
-        this.pantalla = 'login';
-      },
-      guardarParcela() {
-        if (this.editando) {
-          this.parcelas.splice(this.editIndex, 1, { ...this.form });
-        } else {
-          this.parcelas.push({ ...this.form });
-        }
-        this.actualizarStorage();
-        this.reiniciarFormulario();
-      },
-      editarParcela(index) {
-        this.form = { ...this.parcelas[index] };
-        this.editando = true;
-        this.editIndex = index;
-      },
-      eliminarParcela(index) {
-        if (confirm('¿Estás seguro de que deseas eliminar esta parcela?')) {
-          this.parcelas.splice(index, 1);
-          this.actualizarStorage();
-        }
-      },
-      actualizarStorage() {
-        localStorage.setItem('parcelas', JSON.stringify(this.parcelas));
-      },
-      reiniciarFormulario() {
-        this.form = { nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: '' };
-        this.editando = false;
-        this.editIndex = null;
-      },
-      cancelarEdicion() {
-        this.reiniciarFormulario();
-      },
-      guardarActividad() {
-        if (this.editandoActividad) {
-          this.actividades.splice(this.editIndexActividad, 1, { ...this.formActividad });
-        } else {
-          this.actividades.push({ ...this.formActividad });
-        }
-        this.actualizarStorageActividades();
-        this.reiniciarFormularioActividad();
-      },
-      editarActividad(index) {
-        this.formActividad = { ...this.actividades[index] };
-        this.editandoActividad = true;
-        this.editIndexActividad = index;
-      },
-      eliminarActividad(index) {
-        if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
-          this.actividades.splice(index, 1);
-          this.actualizarStorageActividades();
-        }
-      },
-      actualizarStorageActividades() {
-        localStorage.setItem('actividades', JSON.stringify(this.actividades));
-      },
-     reiniciarFormularioActividad() {
-  this.formActividad = {
-    fecha: '',
-    descripcion: '',
-    duracion: '',
-    observaciones: '',
-    problemas: '',
-    responsable: '',
-    parcela: ''
+    editando: false,
+    editIndex: null,
+
+    actividades: JSON.parse(localStorage.getItem('actividades') || '[]'),
+    formActividad: {
+      fecha: '', descripcion: '', duracion: '', observaciones: '', problemas: '', responsable: '', parcela: ''
+    },
+    editandoActividad: false,
+    editIndexActividad: null, // ← AQUÍ FALTABA LA COMA 👈
+
+    insumos: JSON.parse(localStorage.getItem('insumos') || '[]'),
+    formInsumo: {
+      nombre: '', tipo: '', cantidad: '', unidad: '', fechaCompra: '', aplicacion: '', proveedor: '', costo: '', parcela: '', observaciones: ''
+    },
+    editandoInsumo: false,
+    editIndexInsumo: null,
   };
-  this.editandoActividad = false;
-  this.editIndexActividad = null;
 },
-      cancelarEdicionActividad() {
-        this.reiniciarFormularioActividad();
-      }
+
+    methods: {
+  iniciarSesion() {
+    if (this.usuario === 'admin' && this.contrasena === '1234') {
+      this.error = '';
+      this.pantalla = 'panel';
+    } else {
+      this.error = 'Usuario o contraseña incorrectos.';
     }
+  },
+  cerrarSesion() {
+    this.usuario = '';
+    this.contrasena = '';
+    this.pantalla = 'login';
+  },
+
+  // Parcelas (ya estaba)
+  guardarParcela() {
+    if (this.editando) {
+      this.parcelas.splice(this.editIndex, 1, { ...this.form });
+    } else {
+      this.parcelas.push({ ...this.form });
+    }
+    this.actualizarStorage();
+    this.reiniciarFormulario();
+  },
+  editarParcela(index) {
+    this.form = { ...this.parcelas[index] };
+    this.editando = true;
+    this.editIndex = index;
+  },
+  eliminarParcela(index) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta parcela?')) {
+      this.parcelas.splice(index, 1);
+      this.actualizarStorage();
+    }
+  },
+  actualizarStorage() {
+    localStorage.setItem('parcelas', JSON.stringify(this.parcelas));
+  },
+  reiniciarFormulario() {
+    this.form = { nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: '' };
+    this.editando = false;
+    this.editIndex = null;
+  },
+  cancelarEdicion() {
+    this.reiniciarFormulario();
+  },
+
+  // Actividades (ya estaba)
+  guardarActividad() {
+    if (this.editandoActividad) {
+      this.actividades.splice(this.editIndexActividad, 1, { ...this.formActividad });
+    } else {
+      this.actividades.push({ ...this.formActividad });
+    }
+    this.actualizarStorageActividades();
+    this.reiniciarFormularioActividad();
+  },
+  editarActividad(index) {
+    this.formActividad = { ...this.actividades[index] };
+    this.editandoActividad = true;
+    this.editIndexActividad = index;
+  },
+  eliminarActividad(index) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+      this.actividades.splice(index, 1);
+      this.actualizarStorageActividades();
+    }
+  },
+  actualizarStorageActividades() {
+    localStorage.setItem('actividades', JSON.stringify(this.actividades));
+  },
+  reiniciarFormularioActividad() {
+    this.formActividad = {
+      fecha: '',
+      descripcion: '',
+      duracion: '',
+      observaciones: '',
+      problemas: '',
+      responsable: '',
+      parcela: ''
+    };
+    this.editandoActividad = false;
+    this.editIndexActividad = null;
+  },
+  cancelarEdicionActividad() {
+    this.reiniciarFormularioActividad();
+  },
+
+  // NUEVOS MÉTODOS PARA INSUMOS
+  guardarInsumo() {
+    if (this.editandoInsumo) {
+      this.insumos.splice(this.editIndexInsumo, 1, { ...this.formInsumo });
+    } else {
+      this.insumos.push({ ...this.formInsumo });
+    }
+    this.actualizarStorageInsumos();
+    this.reiniciarFormularioInsumo();
+  },
+  editarInsumo(index) {
+    this.formInsumo = { ...this.insumos[index] };
+    this.editandoInsumo = true;
+    this.editIndexInsumo = index;
+  },
+  eliminarInsumo(index) {
+    if (confirm('¿Estás seguro de que deseas eliminar este insumo?')) {
+      this.insumos.splice(index, 1);
+      this.actualizarStorageInsumos();
+    }
+  },
+  actualizarStorageInsumos() {
+    localStorage.setItem('insumos', JSON.stringify(this.insumos));
+  },
+  reiniciarFormularioInsumo() {
+    this.formInsumo = {
+      nombre: '', tipo: '', cantidad: '', unidad: '', fechaCompra: '', aplicacion: '', proveedor: '', costo: '', parcela: '', observaciones: ''
+    };
+    this.editandoInsumo = false;
+    this.editIndexInsumo = null;
+  },
+  cancelarEdicionInsumo() {
+    this.reiniciarFormularioInsumo();
+  }
+}
+
   }).mount('#app');
 </script>
 </body>
