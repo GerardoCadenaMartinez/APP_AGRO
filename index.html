@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <title>Panel Administrativo con Vue</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    input { margin: 5px 0; padding: 10px; width: 100%; max-width: 300px; }
+    input, select, textarea { margin: 5px 0; padding: 10px; width: 100%; max-width: 300px; }
     button { padding: 10px 15px; background: #42b983; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
     .error { color: red; margin-top: 10px; }
     .menu-admin {
@@ -27,8 +28,18 @@
       border-radius: 10px;
       margin-bottom: 5px;
     }
-    form input[type="date"] {
+    form input[type="date"], form select {
       max-width: 160px;
+    }
+    ul {
+      padding-left: 0;
+      list-style: none;
+    }
+    ul li {
+      background: #f0f0f0;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -81,7 +92,6 @@
   <!-- MÓDULO DE PARCELAS -->
   <div v-if="pantalla === 'parcelas'">
     <h2>Parcelas</h2>
-    <!-- Formulario -->
     <form @submit.prevent="guardarParcela">
       <h3>{{ editando ? 'Editar Parcela' : 'Nueva Parcela' }}</h3>
       <input v-model="form.nombre" placeholder="Nombre de la parcela" required />
@@ -100,16 +110,14 @@
       <button type="submit">{{ editando ? 'Actualizar' : 'Guardar' }}</button>
       <button type="button" @click="cancelarEdicion" v-if="editando" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
     </form>
-    <!-- Lista de parcelas -->
     <h3>Parcelas Registradas</h3>
     <ul v-if="parcelas.length">
-      <li v-for="(p, index) in parcelas" :key="index" style="margin-bottom: 10px;">
-        <strong>{{ p.nombre }}</strong> - {{ p.ubicacion }} ({{ p.superficie }} ha)
-        <br>Propietario: {{ p.propietario }} | Tipo de suelo: {{ p.tipoSuelo }}
-        <br>Uso: {{ p.usoSuelo }} | Agua: {{ p.agua }} | Riego: {{ p.riego }}
-        <br>Siembra: {{ p.siembra }} | Cosecha: {{ p.cosecha }}
-        <br>Semilla: {{ p.semilla }} | Fertilizante: {{ p.fertilizante }} | Rendimiento: {{ p.rendimiento }}
-        <br>
+      <li v-for="(p, index) in parcelas" :key="index">
+        <strong>{{ p.nombre }}</strong> - {{ p.ubicacion }} ({{ p.superficie }} ha)<br>
+        Propietario: {{ p.propietario }} | Tipo de suelo: {{ p.tipoSuelo }}<br>
+        Uso: {{ p.usoSuelo }} | Agua: {{ p.agua }} | Riego: {{ p.riego }}<br>
+        Siembra: {{ p.siembra }} | Cosecha: {{ p.cosecha }}<br>
+        Semilla: {{ p.semilla }} | Fertilizante: {{ p.fertilizante }} | Rendimiento: {{ p.rendimiento }}<br>
         <button @click="editarParcela(index)">Editar</button>
         <button @click="eliminarParcela(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
       </li>
@@ -120,260 +128,566 @@
   </div>
 
   <!-- MÓDULO DE ACTIVIDADES -->
-<div v-if="pantalla === 'actividad'">
-  <h2>Actividad</h2>
-  
-  <!-- Formulario -->
-  <form @submit.prevent="guardarActividad">
-    <h3>{{ editandoActividad ? 'Editar Actividad' : 'Nueva Actividad' }}</h3>
-    <input v-model="formActividad.fecha" type="date" placeholder="fecha" required />
-    <input v-model="formActividad.descripcion" placeholder="descripcion de la actividad" required />
-    <input v-model="formActividad.duracion" placeholder="duracion de la actividad" required />
-    <input v-model="formActividad.observaciones" placeholder="observaciones" required />
-    <input v-model="formActividad.problemas" placeholder="problemas detectados" required />
-    <input v-model="formActividad.responsable" placeholder="responsable" required />
-    <input v-model="formActividad.parcela" placeholder="parcela asociada" required />
-    <button type="submit">{{ editandoActividad ? 'Actualizar' : 'Guardar' }}</button>
-    <button type="button" @click="cancelarEdicionActividad" v-if="editandoActividad" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
-  </form>
-  
-  <!-- Lista de actividades -->
-  <h3>Actividades Registradas</h3>
-  <ul v-if="actividades.length">
-  <li v-for="(a, index) in actividades" :key="index" style="margin-bottom: 10px;">
-    <strong>{{ a.fecha }}</strong>: {{ a.descripcion }}  
-    <br>Duración: {{ a.duracion }} | Responsable: {{ a.responsable }} | Parcela: {{ a.parcela }}
-    <br>Observaciones: {{ a.observaciones }}
-    <br>Problemas detectados: {{ a.problemas }}
-    <br>
-    <button @click="editarActividad(index)">Editar</button>
-    <button @click="eliminarActividad(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
-  </li>
-</ul>
-
-  <p v-else>No hay actividades registradas aún.</p>
-
-  <br />
-  <button @click="pantalla = 'panel'">← Volver al Panel</button>
-</div>
-
-<!-- PANTALLA DE INSUMOS -->
-<div v-if="pantalla === 'insumos'">
-  <h2>Insumos</h2>
-
-  <!-- Formulario de insumos -->
-  <form @submit.prevent="guardarInsumo">
-    <h3>{{ editandoInsumo ? 'Editar Insumo' : 'Nuevo Insumo' }}</h3>
-
-    <input v-model="formInsumo.nombre" placeholder="Nombre del insumo" required />
-    <input v-model="formInsumo.tipo" placeholder="Tipo de insumo" required />
-    <input v-model="formInsumo.cantidad" type="number" placeholder="Cantidad usada" required />
-    <input v-model="formInsumo.unidad" placeholder="Unidad de medida (ej. kg, l, etc.)" required />
-    <input v-model="formInsumo.fechaCompra" type="date" placeholder="Fecha de compra" required />
-    <input v-model="formInsumo.aplicacion" placeholder="Aplicación" required />
-    <input v-model="formInsumo.proveedor" placeholder="Proveedor" required />
-    <input v-model="formInsumo.costo" type="number" placeholder="Costo total" required />
-    <input v-model="formInsumo.parcela" placeholder="Parcela asociada" required />
-    <input v-model="formInsumo.observaciones" placeholder="Observaciones" />
-
-    <button type="submit">{{ editandoInsumo ? 'Actualizar' : 'Guardar' }}</button>
-    <button type="button" @click="cancelarEdicionInsumo" v-if="editandoInsumo" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
-  </form>
-
-  <!-- Lista de insumos -->
-  <h3>Insumos Registrados</h3>
-  <ul v-if="insumos.length">
-    <li v-for="(i, index) in insumos" :key="index" style="margin-bottom: 10px;">
-      <strong>{{ i.nombre }}</strong> - {{ i.tipo }} - {{ i.cantidad }} {{ i.unidad }}
-      <br>Aplicación: {{ i.aplicacion }} | Fecha de compra: {{ i.fechaCompra }}
-      <br>Proveedor: {{ i.proveedor }} | Costo: ${{ i.costo }}
-      <br>Parcela: {{ i.parcela }} | Observaciones: {{ i.observaciones }}
-      <br>
-      <button @click="editarInsumo(index)">Editar</button>
-      <button @click="eliminarInsumo(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
-    </li>
-  </ul>
-  <p v-else>No hay insumos registrados aún.</p>
-
-  <br />
-  <button @click="pantalla = 'panel'">← Volver al Panel</button>
-</div>
-  <div v-if="pantalla === 'finanzas'">
-    <h2>Finanzas</h2>
-    <p>Control de ingresos y egresos de la operación agrícola.</p>
-    <button @click="pantalla = 'panel'">← Volver</button>
+  <div v-if="pantalla === 'actividad'">
+    <h2>Actividad</h2>
+    <form @submit.prevent="guardarActividad">
+      <h3>{{ editandoActividad ? 'Editar Actividad' : 'Nueva Actividad' }}</h3>
+      <input v-model="formActividad.fecha" type="date" placeholder="Fecha" required />
+      <input v-model="formActividad.descripcion" placeholder="Descripción de la actividad" required />
+      <input v-model="formActividad.duracion" placeholder="Duración de la actividad" required />
+      <input v-model="formActividad.observaciones" placeholder="Observaciones" required />
+      <input v-model="formActividad.problemas" placeholder="Problemas detectados" required />
+      <input v-model="formActividad.responsable" placeholder="Responsable" required />
+      <input v-model="formActividad.parcela" placeholder="Parcela asociada" required />
+      <button type="submit">{{ editandoActividad ? 'Actualizar' : 'Guardar' }}</button>
+      <button type="button" @click="cancelarEdicionActividad" v-if="editandoActividad" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
+    </form>
+    <h3>Actividades Registradas</h3>
+    <ul v-if="actividades.length">
+      <li v-for="(a, index) in actividades" :key="index">
+        <strong>{{ a.fecha }}</strong>: {{ a.descripcion }} ({{ a.duracion }})<br>
+        Observaciones: {{ a.observaciones }}<br>
+        Problemas: {{ a.problemas }}<br>
+        Responsable: {{ a.responsable }}<br>
+        Parcela: {{ a.parcela }}<br>
+        <button @click="editarActividad(index)">Editar</button>
+        <button @click="eliminarActividad(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
+      </li>
+    </ul>
+    <p v-else>No hay actividades registradas.</p>
+    <br />
+    <button @click="pantalla = 'panel'">← Volver al Panel</button>
   </div>
+
+  <!-- MÓDULO DE INSUMOS -->
+  <div v-if="pantalla === 'insumos'">
+    <h2>Insumos</h2>
+    <form @submit.prevent="guardarInsumo">
+      <h3>{{ editandoInsumo ? 'Editar Insumo' : 'Nuevo Insumo' }}</h3>
+      <input v-model="formInsumo.nombre" placeholder="Nombre del insumo" required />
+      <input v-model="formInsumo.cantidad" type="number" step="0.01" placeholder="Cantidad" required />
+      <input v-model="formInsumo.unidad" placeholder="Unidad de medida" required />
+      <input v-model="formInsumo.descripcion" placeholder="Descripción" />
+      <button type="submit">{{ editandoInsumo ? 'Actualizar' : 'Guardar' }}</button>
+      <button type="button" @click="cancelarEdicionInsumo" v-if="editandoInsumo" style="background:#ccc; color:#333; margin-left:10px;">Cancelar</button>
+    </form>
+    <h3>Insumos Registrados</h3>
+    <ul v-if="insumos.length">
+      <li v-for="(i, index) in insumos" :key="index">
+        <strong>{{ i.nombre }}</strong>: {{ i.cantidad }} {{ i.unidad }}<br>
+        {{ i.descripcion }}<br>
+        <button @click="editarInsumo(index)">Editar</button>
+        <button @click="eliminarInsumo(index)" style="background:red; color:white; margin-left:10px;">Eliminar</button>
+      </li>
+    </ul>
+    <p v-else>No hay insumos registrados.</p>
+    <br />
+    <button @click="pantalla = 'panel'">← Volver al Panel</button>
+  </div>
+
+  <!-- MÓDULO DE FINANZAS -->
+<div v-if="pantalla === 'finanzas'" style="max-width: 600px; margin: auto; padding: 15px; font-family: Arial, sans-serif;">
+
+  <h2 style="text-align: center; margin-bottom: 20px;">Gestión de Finanzas</h2>
+
+  <!-- Formulario para nuevo o editar movimiento -->
+  <form @submit.prevent="guardarMovimiento" style="background: #f5f5f5; padding: 15px; border-radius: 8px; box-shadow: 0 0 6px #ccc;">
+    <h3 style="margin-bottom: 10px;">{{ editandoFinanza ? 'Editar Movimiento' : 'Agregar Movimiento' }}</h3>
+
+    <label for="tipo" style="display:block; margin-bottom: 5px; font-weight: bold;">Tipo:</label>
+    <select v-model="formFinanza.tipo" id="tipo" required style="width: 100%; padding: 6px; margin-bottom: 15px; border-radius: 4px;">
+      <option disabled value="">Seleccione tipo</option>
+      <option value="ingreso">Ingreso</option>
+      <option value="egreso">Egreso</option>
+    </select>
+
+    <label for="descripcion" style="display:block; margin-bottom: 5px; font-weight: bold;">Descripción:</label>
+    <input v-model="formFinanza.descripcion" id="descripcion" placeholder="Descripción" required style="width: 100%; padding: 6px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc;" />
+
+    <label for="monto" style="display:block; margin-bottom: 5px; font-weight: bold;">Monto ($):</label>
+    <input v-model.number="formFinanza.monto" id="monto" type="number" step="0.01" min="0.01" placeholder="Monto" required style="width: 100%; padding: 6px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc;" />
+
+    <label for="fecha" style="display:block; margin-bottom: 5px; font-weight: bold;">Fecha:</label>
+    <input v-model="formFinanza.fecha" id="fecha" type="date" required style="width: 100%; padding: 6px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ccc;" />
+
+    <div style="text-align: right;">
+      <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer;">
+        {{ editandoFinanza ? 'Actualizar' : 'Guardar' }}
+      </button>
+      <button v-if="editandoFinanza" type="button" @click="cancelarEdicionFinanza" 
+              style="background:#ccc; color:#333; margin-left: 10px; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer;">
+        Cancelar
+      </button>
+    </div>
+  </form>
+
+  <!-- FILTROS -->
+  <div style="margin-top: 30px; background: #e9ecef; padding: 12px 15px; border-radius: 8px;">
+    <h3>Filtros</h3>
+    <label for="filtro-tipo" style="margin-right: 10px; font-weight: 600;">Tipo:</label>
+    <select v-model="filtroTipo" id="filtro-tipo" style="padding: 5px 8px; border-radius: 4px; margin-right: 15px;">
+      <option value="todos">Todos</option>
+      <option value="ingreso">Ingresos</option>
+      <option value="egreso">Egresos</option>
+    </select>
+
+    <label for="filtro-fecha" style="margin-right: 10px; font-weight: 600;">Desde:</label>
+    <input type="date" v-model="filtroFechaInicio" id="filtro-fecha" style="padding: 5px 8px; border-radius: 4px; margin-right: 10px;" />
+
+    <label for="filtro-fecha-fin" style="margin-right: 10px; font-weight: 600;">Hasta:</label>
+    <input type="date" v-model="filtroFechaFin" id="filtro-fecha-fin" style="padding: 5px 8px; border-radius: 4px;" />
+  </div>
+
+  <!-- LISTADO MOVIMIENTOS -->
+  <div style="margin-top: 25px;">
+    <h3 style="margin-bottom: 12px;">Movimientos Registrados</h3>
+
+    <ul v-if="movimientosFiltrados.length" style="list-style: none; padding: 0;">
+      <li v-for="(f, index) in movimientosFiltrados" :key="index"
+          :style="{
+            color: f.tipo === 'egreso' ? '#c0392b' : '#27ae60',
+            backgroundColor: index % 2 === 0 ? '#f9f9f9' : '#fff',
+            padding: '10px',
+            borderRadius: '6px',
+            marginBottom: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }"
+      >
+        <div>
+          <strong>{{ f.fecha }}</strong> - <span style="text-transform: uppercase;">{{ f.tipo }}</span>: {{ f.descripcion }}
+          — <strong>${{ f.monto.toFixed(2) }}</strong>
+        </div>
+
+        <div>
+          <button @click="editarFinanza(index)" style="background: #2980b9; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 8px;">Editar</button>
+          <button @click="confirmarEliminar(index)" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Eliminar</button>
+        </div>
+      </li>
+    </ul>
+    <p v-else style="color: #666;">No hay movimientos registrados con los filtros aplicados.</p>
+  </div>
+
+  <!-- RESUMEN -->
+  <div style="margin-top: 30px; background: #f1f8f9; padding: 15px; border-radius: 8px; box-shadow: 0 0 8px #b0d4e6;">
+    <h3>Resumen Financiero</h3>
+    <p><strong style="color: #27ae60;">Total Ingresos:</strong> ${{ totalIngresos.toFixed(2) }}</p>
+    <p><strong style="color: #c0392b;">Total Egresos:</strong> ${{ totalEgresos.toFixed(2) }}</p>
+    <p><strong>Balance Neto:</strong> <span :style="{color: balance >= 0 ? '#27ae60' : '#c0392b', fontWeight: 'bold'}">${{ balance.toFixed(2) }}</span></p>
+  </div>
+
+  <br />
+  <button @click="pantalla = 'panel'" style="background: #34495e; color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer;">← Volver al Panel</button>
+
+</div>
+
+  <!-- MÓDULO DE CALENDARIO -->
   <div v-if="pantalla === 'calendario'">
-    <h2>Calendario</h2>
-    <p>Aquí puedes visualizar y planificar tus actividades.</p>
-    <button @click="pantalla = 'panel'">← Volver</button>
+    <h2>Calendario de Actividades</h2>
+    <p>Vista simple de actividades por fecha.</p>
+    <ul v-if="actividades.length">
+      <li v-for="(a, index) in actividadesOrdenadas" :key="index">
+        <strong>{{ a.fecha }}</strong>: {{ a.descripcion }} (Parcela: {{ a.parcela }})
+      </li>
+    </ul>
+    <p v-else>No hay actividades registradas.</p>
+    <br />
+    <button @click="pantalla = 'panel'">← Volver al Panel</button>
   </div>
+
+  <!-- MÓDULO DE REPORTES -->
   <div v-if="pantalla === 'reportes'">
     <h2>Reportes</h2>
-    <p>Generación de reportes detallados en PDF o Excel.</p>
-    <button @click="pantalla = 'panel'">← Volver</button>
+    <p>Genera reportes en Excel de tus datos registrados.</p>
+    <button @click="exportarExcel('parcelas')">Exportar Parcelas</button>
+    <button @click="exportarExcel('actividades')">Exportar Actividades</button>
+    <button @click="exportarExcel('insumos')">Exportar Insumos</button>
+    <button @click="exportarExcel('finanzas')">Exportar Finanzas</button>
+    <br /><br />
+    <button @click="pantalla = 'panel'">← Volver al Panel</button>
   </div>
+
 </div>
 
 <script>
-  const { createApp } = Vue;
-  createApp({
-    data() {
-  return {
-    pantalla: 'login',
-    usuario: '',
-    contrasena: '',
-    error: '',
+const { createApp } = Vue;
 
-    parcelas: JSON.parse(localStorage.getItem('parcelas') || '[]'),
+createApp({
+ data() {
+  return {
+    pantalla: 'finanzas',
+
+    // Parcelas
+    parcelas: [],
     form: {
-      nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: ''
+      nombre: '',
+      ubicacion: '',
+      superficie: 0,
+      propietario: '',
+      tipoSuelo: '',
+      usoSuelo: '',
+      agua: '',
+      riego: '',
+      siembra: '',
+      cosecha: '',
+      semilla: '',
+      fertilizante: '',
+      rendimiento: '',
     },
     editando: false,
     editIndex: null,
 
-    actividades: JSON.parse(localStorage.getItem('actividades') || '[]'),
+    // Actividades
+    actividades: [],
     formActividad: {
-      fecha: '', descripcion: '', duracion: '', observaciones: '', problemas: '', responsable: '', parcela: ''
-    },
-    editandoActividad: false,
-    editIndexActividad: null, // ← AQUÍ FALTABA LA COMA 👈
-
-    insumos: JSON.parse(localStorage.getItem('insumos') || '[]'),
-    formInsumo: {
-      nombre: '', tipo: '', cantidad: '', unidad: '', fechaCompra: '', aplicacion: '', proveedor: '', costo: '', parcela: '', observaciones: ''
-    },
-    editandoInsumo: false,
-    editIndexInsumo: null,
-  };
-},
-
-    methods: {
-  iniciarSesion() {
-    if (this.usuario === 'admin' && this.contrasena === '1234') {
-      this.error = '';
-      this.pantalla = 'panel';
-    } else {
-      this.error = 'Usuario o contraseña incorrectos.';
-    }
-  },
-  cerrarSesion() {
-    this.usuario = '';
-    this.contrasena = '';
-    this.pantalla = 'login';
-  },
-
-  // Parcelas (ya estaba)
-  guardarParcela() {
-    if (this.editando) {
-      this.parcelas.splice(this.editIndex, 1, { ...this.form });
-    } else {
-      this.parcelas.push({ ...this.form });
-    }
-    this.actualizarStorage();
-    this.reiniciarFormulario();
-  },
-  editarParcela(index) {
-    this.form = { ...this.parcelas[index] };
-    this.editando = true;
-    this.editIndex = index;
-  },
-  eliminarParcela(index) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta parcela?')) {
-      this.parcelas.splice(index, 1);
-      this.actualizarStorage();
-    }
-  },
-  actualizarStorage() {
-    localStorage.setItem('parcelas', JSON.stringify(this.parcelas));
-  },
-  reiniciarFormulario() {
-    this.form = { nombre: '', ubicacion: '', superficie: '', propietario: '', tipoSuelo: '', usoSuelo: '', agua: '', riego: '', siembra: '', cosecha: '', semilla: '', fertilizante: '', rendimiento: '' };
-    this.editando = false;
-    this.editIndex = null;
-  },
-  cancelarEdicion() {
-    this.reiniciarFormulario();
-  },
-
-  // Actividades (ya estaba)
-  guardarActividad() {
-    if (this.editandoActividad) {
-      this.actividades.splice(this.editIndexActividad, 1, { ...this.formActividad });
-    } else {
-      this.actividades.push({ ...this.formActividad });
-    }
-    this.actualizarStorageActividades();
-    this.reiniciarFormularioActividad();
-  },
-  editarActividad(index) {
-    this.formActividad = { ...this.actividades[index] };
-    this.editandoActividad = true;
-    this.editIndexActividad = index;
-  },
-  eliminarActividad(index) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
-      this.actividades.splice(index, 1);
-      this.actualizarStorageActividades();
-    }
-  },
-  actualizarStorageActividades() {
-    localStorage.setItem('actividades', JSON.stringify(this.actividades));
-  },
-  reiniciarFormularioActividad() {
-    this.formActividad = {
       fecha: '',
       descripcion: '',
       duracion: '',
       observaciones: '',
       problemas: '',
       responsable: '',
-      parcela: ''
-    };
-    this.editandoActividad = false;
-    this.editIndexActividad = null;
-  },
-  cancelarEdicionActividad() {
-    this.reiniciarFormularioActividad();
-  },
+      parcela: '',
+    },
+    editandoActividad: false,
+    editIndexActividad: null,
 
-  // NUEVOS MÉTODOS PARA INSUMOS
-  guardarInsumo() {
-    if (this.editandoInsumo) {
-      this.insumos.splice(this.editIndexInsumo, 1, { ...this.formInsumo });
+    // Insumos
+    insumos: [],
+    formInsumo: {
+      nombre: '',
+      cantidad: 0,
+      unidad: '',
+      descripcion: '',
+    },
+    editandoInsumo: false,
+    editIndexInsumo: null,
+
+    // Finanzas
+    finanzas: [], // movimientos financieros
+    formFinanza: {
+      tipo: '',
+      descripcion: '',
+      monto: null,
+      fecha: ''
+    },
+    editandoFinanza: false,
+    indiceEditando: null,
+
+    // Filtros financieros
+    filtroTipo: 'todos',
+    filtroFechaInicio: '',
+    filtroFechaFin: '',
+
+    // Usuario y login
+    usuario: '',
+    contrasena: '',
+    error: '',
+  };
+},
+methods: {
+  guardarMovimiento() {
+    if (!this.formFinanza.tipo || !this.formFinanza.descripcion || !this.formFinanza.monto || !this.formFinanza.fecha) {
+      alert('Por favor completa todos los campos.');
+      return;
+    }
+    if (this.editandoFinanza) {
+      this.finanzas.splice(this.indiceEditando, 1, { ...this.formFinanza });
+      this.editandoFinanza = false;
+      this.indiceEditando = null;
     } else {
-      this.insumos.push({ ...this.formInsumo });
+      this.finanzas.push({ ...this.formFinanza });
     }
-    this.actualizarStorageInsumos();
-    this.reiniciarFormularioInsumo();
+    this.resetFormFinanza();
   },
-  editarInsumo(index) {
-    this.formInsumo = { ...this.insumos[index] };
-    this.editandoInsumo = true;
-    this.editIndexInsumo = index;
+  resetFormFinanza() {
+    this.formFinanza = { tipo: '', descripcion: '', monto: null, fecha: '' };
   },
-  eliminarInsumo(index) {
-    if (confirm('¿Estás seguro de que deseas eliminar este insumo?')) {
-      this.insumos.splice(index, 1);
-      this.actualizarStorageInsumos();
+  editarFinanza(index) {
+    this.formFinanza = { ...this.finanzas[index] };
+    this.editandoFinanza = true;
+    this.indiceEditando = index;
+  },
+  cancelarEdicionFinanza() {
+    this.editandoFinanza = false;
+    this.resetFormFinanza();
+  },
+  confirmarEliminar(index) {
+    if (confirm('¿Seguro que quieres eliminar este movimiento?')) {
+      this.finanzas.splice(index, 1);
+      if (this.editandoFinanza && this.indiceEditando === index) {
+        this.cancelarEdicionFinanza();
+      }
     }
-  },
-  actualizarStorageInsumos() {
-    localStorage.setItem('insumos', JSON.stringify(this.insumos));
-  },
-  reiniciarFormularioInsumo() {
-    this.formInsumo = {
-      nombre: '', tipo: '', cantidad: '', unidad: '', fechaCompra: '', aplicacion: '', proveedor: '', costo: '', parcela: '', observaciones: ''
-    };
-    this.editandoInsumo = false;
-    this.editIndexInsumo = null;
-  },
-  cancelarEdicionInsumo() {
-    this.reiniciarFormularioInsumo();
   }
-}
+},
+computed: {
+  movimientosFiltrados() {
+    let result = [...this.finanzas];
+    if (this.filtroTipo !== 'todos') {
+      result = result.filter(f => f.tipo === this.filtroTipo);
+    }
+    if (this.filtroFechaInicio) {
+      result = result.filter(f => f.fecha >= this.filtroFechaInicio);
+    }
+    if (this.filtroFechaFin) {
+      result = result.filter(f => f.fecha <= this.filtroFechaFin);
+    }
+    // Ordenar por fecha descendente (más reciente primero)
+    result.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    return result;
+  },
+  totalIngresos() {
+    return this.movimientosFiltrados
+      .filter(f => f.tipo === 'ingreso')
+      .reduce((sum, f) => sum + Number(f.monto), 0);
+  },
+  totalEgresos() {
+    return this.movimientosFiltrados
+      .filter(f => f.tipo === 'egreso')
+      .reduce((sum, f) => sum + Number(f.monto), 0);
+  },
+  balance() {
+    return this.totalIngresos - this.totalEgresos;
+  },
+  actividadesOrdenadas() {
+    return [...this.actividades].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  }
+},
 
-  }).mount('#app');
+  methods: {
+    iniciarSesion() {
+      if (this.usuario === 'admin' && this.contrasena === '1234') {
+        this.error = '';
+        this.pantalla = 'panel';
+        // Limpiar campos
+        this.usuario = this.usuario;
+        this.contrasena = '';
+      } else {
+        this.error = 'Usuario o contraseña incorrectos.';
+      }
+    },
+    cerrarSesion() {
+      this.pantalla = 'login';
+      this.usuario = '';
+      this.contrasena = '';
+      this.error = '';
+    },
+
+    // Parcela
+    guardarParcela() {
+      if (this.editando) {
+        this.parcelas.splice(this.editIndex, 1, {...this.form});
+        this.editando = false;
+        this.editIndex = null;
+      } else {
+        this.parcelas.push({...this.form});
+      }
+      this.limpiarFormParcela();
+    },
+    editarParcela(index) {
+      this.form = {...this.parcelas[index]};
+      this.editando = true;
+      this.editIndex = index;
+    },
+    eliminarParcela(index) {
+      if (confirm('¿Eliminar esta parcela?')) {
+        this.parcelas.splice(index, 1);
+      }
+    },
+    cancelarEdicion() {
+      this.editando = false;
+      this.editIndex = null;
+      this.limpiarFormParcela();
+    },
+    limpiarFormParcela() {
+      this.form = {
+        nombre: '',
+        ubicacion: '',
+        superficie: 0,
+        propietario: '',
+        tipoSuelo: '',
+        usoSuelo: '',
+        agua: '',
+        riego: '',
+        siembra: '',
+        cosecha: '',
+        semilla: '',
+        fertilizante: '',
+        rendimiento: '',
+      };
+    },
+
+    // Actividad
+    guardarActividad() {
+      if (this.editandoActividad) {
+        this.actividades.splice(this.editIndexActividad, 1, {...this.formActividad});
+        this.editandoActividad = false;
+        this.editIndexActividad = null;
+      } else {
+        this.actividades.push({...this.formActividad});
+      }
+      this.limpiarFormActividad();
+    },
+    editarActividad(index) {
+      this.formActividad = {...this.actividades[index]};
+      this.editandoActividad = true;
+      this.editIndexActividad = index;
+    },
+    eliminarActividad(index) {
+      if (confirm('¿Eliminar esta actividad?')) {
+        this.actividades.splice(index, 1);
+      }
+    },
+    cancelarEdicionActividad() {
+      this.editandoActividad = false;
+      this.editIndexActividad = null;
+      this.limpiarFormActividad();
+    },
+    limpiarFormActividad() {
+      this.formActividad = {
+        fecha: '',
+        descripcion: '',
+        duracion: '',
+        observaciones: '',
+        problemas: '',
+        responsable: '',
+        parcela: '',
+      };
+    },
+
+    // Insumos
+    guardarInsumo() {
+      if (this.editandoInsumo) {
+        this.insumos.splice(this.editIndexInsumo, 1, {...this.formInsumo});
+        this.editandoInsumo = false;
+        this.editIndexInsumo = null;
+      } else {
+        this.insumos.push({...this.formInsumo});
+      }
+      this.limpiarFormInsumo();
+    },
+    editarInsumo(index) {
+      this.formInsumo = {...this.insumos[index]};
+      this.editandoInsumo = true;
+      this.editIndexInsumo = index;
+    },
+    eliminarInsumo(index) {
+      if (confirm('¿Eliminar este insumo?')) {
+        this.insumos.splice(index, 1);
+      }
+    },
+    cancelarEdicionInsumo() {
+      this.editandoInsumo = false;
+      this.editIndexInsumo = null;
+      this.limpiarFormInsumo();
+    },
+    limpiarFormInsumo() {
+      this.formInsumo = {
+        nombre: '',
+        cantidad: 0,
+        unidad: '',
+        descripcion: '',
+      };
+    },
+
+    // Finanzas
+    guardarMovimiento() {
+      if (this.editandoFinanza) {
+        this.finanzas.splice(this.editIndexFinanza, 1, {...this.formFinanza});
+        this.editandoFinanza = false;
+        this.editIndexFinanza = null;
+      } else {
+        this.finanzas.push({...this.formFinanza});
+      }
+      this.limpiarFormFinanza();
+    },
+    editarFinanza(index) {
+      this.formFinanza = {...this.finanzas[index]};
+      this.editandoFinanza = true;
+      this.editIndexFinanza = index;
+    },
+    eliminarFinanza(index) {
+      if (confirm('¿Eliminar este movimiento?')) {
+        this.finanzas.splice(index, 1);
+      }
+    },
+    cancelarEdicionFinanza() {
+      this.editandoFinanza = false;
+      this.editIndexFinanza = null;
+      this.limpiarFormFinanza();
+    },
+    limpiarFormFinanza() {
+      this.formFinanza = {
+        tipo: '',
+        descripcion: '',
+        monto: 0,
+        fecha: '',
+      };
+    },
+
+    // Exportar datos a Excel usando SheetJS
+    exportarExcel(tipo) {
+      let data = [];
+      let ws_name = "";
+      if (tipo === 'parcelas') {
+        ws_name = "Parcelas";
+        data = this.parcelas.map(p => ({
+          Nombre: p.nombre,
+          Ubicación: p.ubicacion,
+          Superficie: p.superficie,
+          Propietario: p.propietario,
+          Tipo_de_Suelo: p.tipoSuelo,
+          Uso_de_Suelo: p.usoSuelo,
+          Agua: p.agua,
+          Riego: p.riego,
+          Siembra: p.siembra,
+          Cosecha: p.cosecha,
+          Semilla: p.semilla,
+          Fertilizante: p.fertilizante,
+          Rendimiento: p.rendimiento,
+        }));
+      } else if (tipo === 'actividades') {
+        ws_name = "Actividades";
+        data = this.actividades.map(a => ({
+          Fecha: a.fecha,
+          Descripción: a.descripcion,
+          Duración: a.duracion,
+          Observaciones: a.observaciones,
+          Problemas: a.problemas,
+          Responsable: a.responsable,
+          Parcela: a.parcela,
+        }));
+      } else if (tipo === 'insumos') {
+        ws_name = "Insumos";
+        data = this.insumos.map(i => ({
+          Nombre: i.nombre,
+          Cantidad: i.cantidad,
+          Unidad: i.unidad,
+          Descripción: i.descripcion,
+        }));
+      } else if (tipo === 'finanzas') {
+        ws_name = "Finanzas";
+        data = this.finanzas.map(f => ({
+          Tipo: f.tipo,
+          Descripción: f.descripcion,
+          Monto: f.monto,
+          Fecha: f.fecha,
+        }));
+      } else {
+        alert('Tipo de reporte no válido');
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, ws_name);
+      XLSX.writeFile(wb, `${ws_name}_Reporte.xlsx`);
+    }
+  }
+}).mount('#app');
 </script>
+
 </body>
 </html>
